@@ -1,29 +1,68 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model, authenticate
+from .models import AppUser, Domain, Users, Instructor, Learner, Training, Lesson, IsEnrolled, Video, Tasks, Test
 
-UserModel = get_user_model()
 
-class UserRegisterSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = UserModel
-		fields = '__all__'
-	def create(self, clean_data):
-		user_obj = UserModel.objects.create_user(email=clean_data['email'], password=clean_data['password'])
-		user_obj.username = clean_data['username']
-		user_obj.save()
-		return user_obj
+class UsersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Users
+        fields = '__all__'
 
-class UserLoginSerializer(serializers.Serializer):
-	email = serializers.EmailField()
-	password = serializers.CharField()
-	##
-	def check_user(self, clean_data):
-		user = authenticate(username=clean_data['email'], password=clean_data['password'])
-		if not user:
-			raise ValidationError('user not found')
-		return user
 
-class UserSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = UserModel
-		fields = ('email', 'username')
+class AppUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AppUser
+        fields = '__all__'
+
+
+class DomainSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Domain
+        fields = '__all__'
+
+
+class InstructorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Instructor
+        fields = '__all__'
+
+
+class LearnerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Learner
+        fields = '__all__'
+
+
+class TrainingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Training
+        fields = '__all__'
+
+
+class LessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = '__all__'
+
+
+class IsEnrolledSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IsEnrolled
+        fields = '__all__'
+
+
+class VideoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Video
+        fields = '__all__'
+
+
+class TasksSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tasks
+        fields = '__all__'
+
+
+class TestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Test
+        fields = '__all__'
