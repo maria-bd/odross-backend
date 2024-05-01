@@ -2,7 +2,18 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny  # Import the permission class you want to use
-from .serializers import UserRegistrationSerializer, UserLoginSerializer
+from .serializers import UserRegistrationSerializer, UserLoginSerializer, InstructorLoginSerializer
+
+class InstructorLogin(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = InstructorLoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data
+            # You can customize the response as per your requirement
+            return Response({'message': 'Instructor login successful', 'name': user.name}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserRegistration(APIView):
     permission_classes = [AllowAny]  # Set the permission class for this view
