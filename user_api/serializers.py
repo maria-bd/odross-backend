@@ -3,6 +3,23 @@ from .models import AppUser, Domain, Instructor, Learner, Training, Lesson, IsEn
 from django.core.exceptions import ValidationError
 # from django.contrib.auth import authenticate
 
+class InstructorLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+
+        if email and password:
+            try:
+                # Check if the user exists and is_superuser is True
+                user = AppUser.objects.get(email=email, password=password, is_superuser=True)
+                return user
+            except AppUser.DoesNotExist:
+                raise ValidationError('User not found or not an instructor')
+        else:
+            raise ValidationError("Must include 'email' and 'password'.")
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
