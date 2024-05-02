@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from .models import AppUser, Domain, Instructor, Learner, Training, Lesson, IsEnrolled, Video, Tasks, Test
 from django.core.exceptions import ValidationError
-# from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+
 
 class InstructorLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -33,6 +35,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
         return user
+
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
@@ -56,6 +59,10 @@ class AppUserSerializer(serializers.ModelSerializer):
                   'is_active', 'is_staff']
 
 
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AppUser
+        fields = ['name', 'fam_name', 'bio', 'photo']
 class DomainSerializer(serializers.ModelSerializer):
     class Meta:
         model = Domain
