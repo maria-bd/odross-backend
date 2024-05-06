@@ -6,7 +6,7 @@ from .models import AppUser  # Import the AppUser model
 from .serializers import UserRegistrationSerializer, ProfileUpdateSerializer, ProfileSerializer, UserLoginSerializer, InstructorLoginSerializer
 from rest_framework.authtoken.models import Token
 from django.shortcuts import get_object_or_404
-from .serializers import VideoSerializer, AppUserSerializer
+from .serializers import VideoSerializer, AppUserSerializer, adminLoginSerializer
 
 class VideoCreateAPIView(APIView):
     permission_classes = [AllowAny]  # Set permission to AllowAny
