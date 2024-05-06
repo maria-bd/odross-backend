@@ -4,7 +4,28 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AppUser
+        fields = ['name', 'fam_name', 'bio', 'photo']
 
+class adminLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+
+        if email and password:
+            try:
+                # Check if the user exists and is_staff is True
+                user = AppUser.objects.get(email=email, password=password, is_staff=True)
+                return user
+            except AppUser.DoesNotExist:
+                raise ValidationError('User not found')
+        else:
+            raise ValidationError("Must include 'email' and 'password'.")
 class InstructorLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
