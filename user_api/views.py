@@ -32,11 +32,16 @@ class ProfileView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        if request.method == 'GET':
-            users = AppUser.objects.all()
-            serializer = ProfileSerializer(users, many=True)
-            return Response(serializer.data)
-
+        email = request.GET.get('email', None)
+        if email:
+            try:
+                user = AppUser.objects.get(email=email)
+                serializer = ProfileSerializer(user)
+                return Response(serializer.data)
+            except AppUser.DoesNotExist:
+                return Response({"error": "User not found"}, status=404)
+        else:
+            return Response({"error": "Email parameter is required"}, status=400)
 class UserLogin(APIView):
     permission_classes = [AllowAny]
 
