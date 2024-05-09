@@ -3,10 +3,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from .models import AppUser  # Import the AppUser model
-from .serializers import UserRegistrationSerializer, ProfileUpdateSerializer, ProfileSerializer, UserLoginSerializer, InstructorLoginSerializer
+from .serializers import UserRegistrationSerializer, ProfileSerializer, UserLoginSerializer, InstructorLoginSerializer
 from rest_framework.authtoken.models import Token
 from django.shortcuts import get_object_or_404
-from .serializers import VideoSerializer, AppUserSerializer, adminLoginSerializer
+from .serializers import VideoSerializer, AppUserSerializer, adminLoginSerializer, LearnerSerializer
 
 class VideoCreateAPIView(APIView):
     permission_classes = [AllowAny]  # Set permission to AllowAny
@@ -27,34 +27,6 @@ class AppUserCreateAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class ProfileUpdateView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = ProfileSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data.get('email')
-            name = serializer.validated_data.get('name')
-            fam_name = serializer.validated_data.get('fam_name')
-            gender = serializer.validated_data.get('gender')
-            bio = serializer.validated_data.get('bio')
-            photo = request.FILES.get('photo')  # Get the uploaded profile picture
-
-            try:
-                user = AppUser.objects.get(email=email)
-                user.name = name
-                user.fam_name = fam_name
-                user.gender = gender
-                user.bio = bio
-                if photo:
-                    user.photo = photo
-                user.save()
-                return Response({'message': 'Profile updated successfully'})
-            except AppUser.DoesNotExist:
-                return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProfileView(APIView):
     permission_classes = [AllowAny]
@@ -98,14 +70,23 @@ class InstructorLogin(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserRegistration(APIView):
-    permission_classes = [AllowAny]  # Set the permission class for this view
+    permission_classes = [AllowAny]
+
     def post(self, request):
-        if request.method == 'POST':  # Check if the request method is POST
+        if request.method == 'POST':
             data = request.data
             serializer = UserRegistrationSerializer(data=data)
             if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                user = serializer.save()  # Save the user instance
+                # Create a Learner instance associated with the user
+                learner_data = {'user': user.id, 'total_XP': 0}  # Assuming total_XP starts from 0
+                learner_serializer = LearnerSerializer(data=learner_data)
+                if learner_serializer.is_valid():
+                    learner_serializer.save()
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                else:
+                    user.delete()  # Rollback user creation if learner creation fails
+                    return Response(learner_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"detail": "Method not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
