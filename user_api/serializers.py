@@ -81,9 +81,11 @@ class AppUserSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    total_XP = serializers.IntegerField(source='learner.total_XP', read_only=True)
+
     class Meta:
         model = AppUser
-        fields = ['name', 'fam_name', 'bio', 'photo']
+        fields = ['name', 'fam_name', 'bio', 'photo', 'total_XP']
 class DomainSerializer(serializers.ModelSerializer):
     class Meta:
         model = Domain
@@ -99,7 +101,7 @@ class InstructorSerializer(serializers.ModelSerializer):
 class LearnerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Learner
-        fields = ['user', 'type_user', 'total_XP']
+        fields = ['user', 'total_XP']
 
 
 class TrainingSerializer(serializers.ModelSerializer):
