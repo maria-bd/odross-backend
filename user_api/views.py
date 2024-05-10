@@ -2,12 +2,44 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
-from .models import AppUser  # Import the AppUser model
+from .models import AppUser, Domain
 from .serializers import UserRegistrationSerializer, ProfileSerializer, UserLoginSerializer, InstructorLoginSerializer
 from rest_framework.authtoken.models import Token
 from django.shortcuts import get_object_or_404
-from .serializers import VideoSerializer, AppUserSerializer, adminLoginSerializer, LearnerSerializer
+from .serializers import VideoSerializer, AppUserSerializer, adminLoginSerializer, LearnerSerializer, \
+    EditProfileSerializer, DomainSerializer
 
+class DomainListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        # Check if the HTTP method is GET
+        if request.method == 'GET':
+            # Retrieve all domain objects
+            domains = Domain.objects.all()
+            # Serialize the data
+            serializer = DomainSerializer(domains, many=True)
+            # Return the serialized data
+            return Response(serializer.data)
+class EditProfileView(APIView):
+    permission_classes = [AllowAny]
+
+    def put(self, request):
+        email = request.GET.get('email')
+        if not email:
+            return Response({"error": "Email parameter is required"}, status=400)
+
+        try:
+            user = AppUser.objects.get(email=email)
+        except AppUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        serializer = EditProfileSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=400)
 class VideoCreateAPIView(APIView):
     permission_classes = [AllowAny]  # Set permission to AllowAny
 
