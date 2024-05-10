@@ -2,12 +2,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
-from .models import AppUser, Domain
+from .models import AppUser, Domain, Lesson, Training
 from .serializers import UserRegistrationSerializer, ProfileSerializer, UserLoginSerializer, InstructorLoginSerializer
 from rest_framework.authtoken.models import Token
 from django.shortcuts import get_object_or_404
 from .serializers import VideoSerializer, AppUserSerializer, adminLoginSerializer, LearnerSerializer, \
-    EditProfileSerializer, DomainSerializer
+    EditProfileSerializer, DomainSerializer, LessonSerializer, TrainingSerializer
 
 class DomainListView(APIView):
     permission_classes = [AllowAny]
@@ -19,6 +19,28 @@ class DomainListView(APIView):
             domains = Domain.objects.all()
             # Serialize the data
             serializer = DomainSerializer(domains, many=True)
+            # Return the serialized data
+            return Response(serializer.data)
+
+class TrainingListView(APIView):
+        permission_classes = [AllowAny]
+        def get(self, request):
+            if request.method == 'GET':
+               trainings = Training.objects.all()
+                # Serialize the data
+               serializer = TrainingSerializer(trainings, many=True)
+               return Response(serializer.data)
+
+class LessonListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        # Check if the HTTP method is GET
+        if request.method == 'GET':
+            # Retrieve all domain objects
+            Lessons = Lesson.objects.all()
+            # Serialize the data
+            serializer = LessonSerializer(Lessons, many=True)
             # Return the serialized data
             return Response(serializer.data)
 class EditProfileView(APIView):
