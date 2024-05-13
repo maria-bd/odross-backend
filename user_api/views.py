@@ -2,13 +2,27 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
-from .models import AppUser, Domain, Lesson, Training
+from .models import AppUser, Domain, Lesson, Training, Video
 from .serializers import UserRegistrationSerializer, ProfileSerializer, UserLoginSerializer, InstructorLoginSerializer
 from rest_framework.authtoken.models import Token
 from django.shortcuts import get_object_or_404
 from .serializers import VideoSerializer, AppUserSerializer, adminLoginSerializer, LearnerSerializer, \
     EditProfileSerializer, DomainSerializer, LessonSerializer, TrainingSerializer
 
+class VideoView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        lesson = request.GET.get('lesson', None)
+        if lesson:
+            try:
+                videos = Video.objects.filter(lesson=lesson)
+                serializer = VideoSerializer(videos, many=True)
+                return Response(serializer.data)
+            except Video.DoesNotExist:
+                return Response({"error": "Videos not found for this lesson"}, status=404)
+        else:
+            return Response({"error": "lesson_id parameter is required"}, status=400)
 class DomainListView(APIView):
     permission_classes = [AllowAny]
 
@@ -30,7 +44,27 @@ class TrainingListView(APIView):
                 # Serialize the data
                serializer = TrainingSerializer(trainings, many=True)
                return Response(serializer.data)
+class LessonDetailView(APIView):
+    permission_classes = [AllowAny]
 
+    def get(self, request, lesson_id):
+        try:
+            # Retrieve the lesson object based on the provided lesson_id
+            lesson = Lesson.objects.get(lesson_id=lesson_id)
+            # Serialize the lesson data along with the associated videos
+            serializer = LessonSerializer(lesson)
+            serialized_data = serializer.data
+
+            # Fetch and serialize the videos associated with the lesson
+            videos = Video.objects.filter(lesson=lesson)
+            video_serializer = VideoSerializer(videos, many=True)
+            serialized_data['videos'] = video_serializer.data
+
+            # Return the updated serialized data
+            return Response(serialized_data)
+        except Lesson.DoesNotExist:
+            # Return a 404 Not Found response if the lesson does not exist
+            return Response(status=status.HTTP_404_NOT_FOUND)
 class LessonListView(APIView):
     permission_classes = [AllowAny]
 

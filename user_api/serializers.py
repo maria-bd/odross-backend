@@ -4,11 +4,19 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 
-class ProfileUpdateSerializer(serializers.ModelSerializer):
+class EditProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppUser
-        fields = ['name', 'fam_name', 'bio', 'photo']
+        fields = ['name', 'fam_name', 'password', 'photo', 'bio']
 
+    def update(self, instance, validated_data):
+        instance.name = validated_data.get('name', instance.name)
+        instance.fam_name = validated_data.get('fam_name', instance.fam_name)
+        instance.password = validated_data.get('password', instance.password)
+        instance.photo = validated_data.get('photo', instance.photo)
+        instance.bio = validated_data.get('bio', instance.bio)
+        instance.save()
+        return instance
 class adminLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
