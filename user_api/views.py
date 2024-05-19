@@ -8,7 +8,30 @@ from rest_framework.authtoken.models import Token
 from django.shortcuts import get_object_or_404
 from .serializers import VideoSerializer, AppUserSerializer, adminLoginSerializer, LearnerSerializer, \
     EditProfileSerializer, DomainSerializer, LessonSerializer, TrainingSerializer
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from .utils import generate_mock_response  # Assuming utils.py is in the same directory
+from .chatbot import ChatBot
+from configparser import ConfigParser
 
+class ChatBotView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            user_input = request.data.get('message', '')
+            if not user_input:
+                return Response({'error': 'No message provided'}, status=400)
+
+            config = ConfigParser()
+            config.read('credentials.ini')
+            api_key = config['gemini_ai']['API_KEY']
+
+            chatbot = ChatBot(api_key=api_key)
+            response = chatbot.ChatWithModel(user_input)
+            return Response({'response': response})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
 class VideoView(APIView):
     permission_classes = [AllowAny]
 

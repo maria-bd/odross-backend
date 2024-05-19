@@ -8,7 +8,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('The Email field must be set')
         email = self.normalize_email(email)
         user = self.model(email=email, name=name, **extra_fields)
-        user.set_password(password)
+        user.password = password  # Store password as provided without hashing
         user.save(using=self._db)
         return user
 
@@ -22,6 +22,7 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(email, name, password, **extra_fields)
 
+
 class AppUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True, max_length=254)
     password = models.CharField(max_length=254)
@@ -29,7 +30,7 @@ class AppUser(AbstractBaseUser, PermissionsMixin):
     fam_name = models.CharField(max_length=30, blank=True)  # Added blank=True for optional field
     gender = models.CharField(max_length=30, blank=True)  # Added blank=True for optional field
     bio = models.CharField(max_length=500, blank=True)  # Added blank=True for optional field
-    photo = models.CharField(max_length=50, blank=True)  # Added blank=True for optional field
+    photo = models.ImageField(upload_to='images/')  # Added blank=True for optional field
     date_joined = models.DateTimeField(default=timezone.now)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -86,7 +87,7 @@ class Video(models.Model):
     id_vid = models.AutoField(primary_key=True)
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)
     XP_pts = models.IntegerField()
-    link_vid = models.CharField(max_length=255)
+    link_vid = models.FileField(upload_to='videos/')
 
 
 class Tasks(models.Model):
@@ -103,4 +104,3 @@ class Test(models.Model):
     question = models.CharField(max_length=300)
     response = models.CharField(max_length=800)
     mark = models.FloatField()
-
