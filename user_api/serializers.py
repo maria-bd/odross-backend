@@ -1,8 +1,76 @@
 from rest_framework import serializers
-from .models import AppUser, Domain, Instructor, Learner, Training, Lesson, IsEnrolled, Video, Tasks, Test
+from .models import AppUser, Domain, Instructor, Learner, Training, Lesson, IsEnrolled, Video
 from django.core.exceptions import ValidationError
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
+from rest_framework import serializers
+from .models import Quiz, Question, Answer
+
+
+from rest_framework import serializers
+from .models import Quiz, Question, Answer
+
+class QuizSerializer(serializers.ModelSerializer):
+    question_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Quiz
+        fields = [
+            "quiz_id",
+            "title",
+            "created_at",
+            "question_count",
+            "XP_pts"
+        ]
+
+    def get_question_count(self, obj):
+        return obj.question_count
+
+
+class AnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Answer
+        fields = [
+            "id",
+            "answer_text",
+            "is_right"
+        ]
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    quiz = QuizSerializer(read_only=True)
+    answers = AnswerSerializer(many=True)
+
+    class Meta:
+        model = Question
+        fields = [
+            "id",
+            "quiz",
+            "title",
+            "answers",
+        ]
+
+    def create(self, validated_data):
+        answers_data = validated_data.pop("answers", [])
+        question = Question.objects.create(**validated_data)
+
+        for answer_data in answers_data:
+            Answer.objects.create(question=question, **answer_data)
+
+        return question
+
+    def update(self, instance, validated_data):
+        instance.title = validated_data.get("title", instance.title)
+        instance.save()
+
+        # Update the associated answers
+        answers_data = validated_data.pop("answers", [])
+        instance.answers.all().delete()  # Deleting existing answers
+        for answer_data in answers_data:
+            Answer.objects.create(question=instance, **answer_data)
+
+        return instance
+
 
 class EditProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,6 +85,7 @@ class EditProfileSerializer(serializers.ModelSerializer):
         instance.bio = validated_data.get('bio', instance.bio)
         instance.save()
         return instance
+
 class adminLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
@@ -84,8 +153,7 @@ class UserLoginSerializer(serializers.Serializer):
 class AppUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppUser
-        fields = ['id', 'password', 'email', 'name', 'fam_name', 'gender', 'bio', 'photo', 'date_joined',
-                  'is_active', 'is_staff']
+        fields = ['id', 'password', 'email', 'name', 'fam_name', 'bio', 'photo', 'is_active', 'is_staff']
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -125,24 +193,15 @@ class LessonSerializer(serializers.ModelSerializer):
 
 
 class IsEnrolledSerializer(serializers.ModelSerializer):
+    quiz = QuizSerializer()
+    user = LearnerSerializer()
+
     class Meta:
         model = IsEnrolled
-        fields = ['lesson', 'user', 'name']
-
+        fields = ['id', 'quiz', 'user', 'enrollment_date']
 
 class VideoSerializer(serializers.ModelSerializer):
+    lesson = LessonSerializer()
     class Meta:
         model = Video
-        fields = ['id_vid', 'lesson', 'XP_pts', 'link_vid']
-
-
-class TasksSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Tasks
-        fields = ['id_task', 'lesson', 'XP_pts', 'question', 'response']
-
-
-class TestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Test
-        fields = ['test_id', 'lesson', 'question', 'response', 'mark']
+        fields = ['id_vid', 'lesson', 'link_vid', 'video_description', 'video_title']

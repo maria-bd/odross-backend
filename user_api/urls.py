@@ -1,9 +1,15 @@
 from django.urls import path
 from .views import UserRegistration, UserLogin, InstructorLogin, ProfileView, adminLogin, EditProfileView, \
     AppUserCreateAPIView, DomainListView, LessonListView, TrainingListView, VideoCreateAPIView, VideoView, \
-    LessonDetailView
+    LessonDetailView, ChatBotView, ListCreateQuiz, RetriveUpdateDestroyQuiz, QuizQuestion, QuizQuestionDetail
+
 
 urlpatterns = [
+    path("", ListCreateQuiz.as_view(), name="quiz_list"),
+    path("<int:quiz_id>/", RetriveUpdateDestroyQuiz.as_view(), name="quiz_detail"),
+    path("questions/<int:quiz_id>/", QuizQuestion.as_view(), name="questions"),
+    path("questions/detail/<int:pk>/", QuizQuestionDetail.as_view(), name="question_detail"),
+    path('generate/', ChatBotView.as_view(), name='generate_chatbot_response'),
     path('register/', UserRegistration.as_view(), name='user-registration'),
     path('login/', UserLogin.as_view(), name='user_login'),
     path('login2/', InstructorLogin.as_view(), name='instructor-login'),
