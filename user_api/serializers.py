@@ -1,14 +1,27 @@
-from rest_framework import serializers
 from .models import AppUser, Domain, Instructor, Learner, Training, Lesson, IsEnrolled, Video
 from django.core.exceptions import ValidationError
-from django.contrib.auth import authenticate
-from rest_framework.authtoken.models import Token
 from rest_framework import serializers
-from .models import Quiz, Question, Answer
+from .models import Quiz, Question, Answer, AppUser
+from django.contrib.auth import get_user_model, authenticate
 
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(max_length=100, min_length=8, style={'input_type': 'password'})
 
-from rest_framework import serializers
-from .models import Quiz, Question, Answer
+    class Meta:
+        model = get_user_model()
+        fields = ['email', 'password']
+
+    def create(self, validated_data):
+        user_password = validated_data.get('password', None)
+        db_instance = self.Meta.model(email=validated_data.get('email'))
+        db_instance.set_password(user_password)
+        db_instance.save()
+        return db_instance
+
+class UserLoginSerializer(serializers.Serializer):
+    email = serializers.CharField(max_length=100)
+    password = serializers.CharField(max_length=100, min_length=8, style={'input_type': 'password'})
+    token = serializers.CharField(max_length=255, read_only=True)
 
 class QuizSerializer(serializers.ModelSerializer):
     question_count = serializers.SerializerMethodField()
@@ -85,7 +98,7 @@ class EditProfileSerializer(serializers.ModelSerializer):
         instance.bio = validated_data.get('bio', instance.bio)
         instance.save()
         return instance
-
+'''
 class adminLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
@@ -120,8 +133,7 @@ class InstructorLoginSerializer(serializers.Serializer):
                 raise ValidationError('User not found or not an instructor')
         else:
             raise ValidationError("Must include 'email' and 'password'.")
-
-class UserRegistrationSerializer(serializers.ModelSerializer):
+class InstructorRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppUser
         fields = ['name', 'email', 'password']
@@ -130,26 +142,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = AppUser.objects.create(
             email=validated_data['email'],
             name=validated_data['name'],
-            password=validated_data['password']
+            password=validated_data['password'],
+            is_superuser=True
         )
         return user
-
-class UserLoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField()
-
-    def validate(self, data):
-        email = data.get('email')
-        password = data.get('password')
-
-        if email and password:
-            try:
-                user = AppUser.objects.get(email=email, password=password)
-                return user
-            except AppUser.DoesNotExist:
-                raise ValidationError('User not found')
-        else:
-            raise ValidationError("Must include 'email' and 'password'.")
+'''''
 class AppUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppUser

@@ -1,39 +1,155 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework import status
-from .models import AppUser, Domain, Lesson, Training, Video
-from .serializers import UserRegistrationSerializer, ProfileSerializer, UserLoginSerializer, InstructorLoginSerializer
-from rest_framework.authtoken.models import Token
-from django.shortcuts import get_object_or_404
-from .serializers import VideoSerializer, AppUserSerializer, adminLoginSerializer, LearnerSerializer, \
-    EditProfileSerializer, DomainSerializer, LessonSerializer, TrainingSerializer
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from .utils import generate_mock_response  # Assuming utils.py is in the same directory
+from .models import AppUser, Domain, Lesson, Training, Video, Instructor, Learner, IsEnrolled
+# from .serializers import UserRegistrationSerializer, ProfileSerializer, UserLoginSerializer, InstructorLoginSerializer
+from .serializers import VideoSerializer, AppUserSerializer, LearnerSerializer, EditProfileSerializer,\
+    DomainSerializer, LessonSerializer, TrainingSerializer
 from .chatbot import ChatBot
 from configparser import ConfigParser
-from django.shortcuts import render
 from rest_framework import generics, status
-from rest_framework.response import Response
-from .models import Quiz, Question
+from .models import Quiz, Question, Answer
 from .serializers import QuizSerializer, QuestionSerializer
+from .serializers import UserRegistrationSerializer, UserLoginSerializer
 from rest_framework.views import APIView
-from django.http import Http404
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
+from django.contrib.auth import authenticate
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from .utils import generate_access_token
+import jwt
 
 
-class ListCreateQuiz(generics.ListCreateAPIView):
+class UserRegistrationAPIView(APIView):
+    serializer_class = UserRegistrationSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        content = {'message': 'Hello!'}
+        return Response(content)
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            new_user = serializer.save()
+            if new_user:
+                access_token = generate_access_token(new_user)
+                data = {'access_token': access_token}
+                response = Response(data, status=status.HTTP_201_CREATED)
+                response.set_cookie(key='access_token', value=access_token, httponly=True)
+
+                # Adding learner creation functionality
+                learner_data = {'user': new_user.id, 'total_XP': 0}
+                learner_serializer = LearnerSerializer(data=learner_data)
+                if learner_serializer.is_valid():
+                    learner_serializer.save()
+                    return response
+                else:
+                    new_user.delete()  # Rollback user creation if learner creation fails
+                    return Response(learner_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class UserLoginAPIView(APIView):
+    serializer_class = UserLoginSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        email = request.data.get('email', None)
+        user_password = request.data.get('password', None)
+
+        if not user_password:
+            raise AuthenticationFailed('A user password is needed.')
+
+        if not email:
+            raise AuthenticationFailed('An user email is needed.')
+
+        user_instance = authenticate(username=email, password=user_password)
+
+        if not user_instance:
+            raise AuthenticationFailed('User not found.')
+
+        if user_instance.is_active:
+            user_access_token = generate_access_token(user_instance)
+            response = Response()
+            response.set_cookie(key='access_token', value=user_access_token, httponly=True)
+            response.data = {'access_token': user_access_token}
+            return response
+
+        return Response({'message': 'Something went wrong.'})
+
+class UserViewAPI(APIView):
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        user_token = request.COOKIES.get('access_token')
+
+        if not user_token:
+            raise AuthenticationFailed('Unauthenticated user.')
+
+        payload = jwt.decode(user_token, settings.SECRET_KEY, algorithms=['HS256'])
+
+        user_model = get_user_model()
+        user = user_model.objects.filter(id=payload['id']).first()
+        user_serializer = UserRegistrationSerializer(user)
+        return Response(user_serializer.data)
+
+class UserLogoutViewAPI(APIView):
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        user_token = request.COOKIES.get('access_token', None)
+        if user_token:
+            response = Response()
+            response.delete_cookie('access_token')
+            response.data = {
+                'message': 'Logged out successfully.'
+            }
+            return response
+        response = Response()
+        response.data = {
+            'message': 'User is already logged out.'
+        }
+        return response
+
+# User stuff
+'''
+class ProfileView(RetrieveAPIView):
+    serializer_class = ProfileSerializer
+
+    def get_object(self):
+        return self.request.user
+'''
+# quiz 1.0
+class CreateQuiz(generics.CreateAPIView):
     permission_classes = [AllowAny]
     queryset = Quiz.objects.all()
     serializer_class = QuizSerializer
 
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)  # Return created data
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  # Return error message
+
+class ListQuiz(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    queryset = Quiz.objects.all()
+    serializer_class = QuizSerializer
+
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
 class RetriveUpdateDestroyQuiz(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [AllowAny]
     queryset = Quiz.objects.all()
     serializer_class = QuizSerializer
     lookup_url_kwarg = "quiz_id"
-
 
 class QuizQuestion(APIView):
     permission_classes = [AllowAny]
@@ -54,8 +170,6 @@ class QuizQuestion(APIView):
                 {"message": "Question created successfully", "data": serializer.data},
                 status=status.HTTP_201_CREATED
             )
-
-
 class QuizQuestionDetail(APIView):
     permission_classes = [AllowAny]
 
@@ -211,41 +325,23 @@ class AppUserCreateAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ProfileView(APIView):
+class TopUsersView(APIView):
     permission_classes = [AllowAny]
+    def get(self, request):
+        top_users = AppUser.objects.filter(learner__isnull=False).order_by('-learner__total_XP')[:10]
+        serializer = ProfileSerializer(top_users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+'''
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]  # Only authenticated users can access this view
 
     def get(self, request):
-        email = request.GET.get('email', None)
-        if email:
-            try:
-                user = AppUser.objects.get(email=email)
-                serializer = ProfileSerializer(user)
-                return Response(serializer.data)
-            except AppUser.DoesNotExist:
-                return Response({"error": "User not found"}, status=404)
-        else:
-            return Response({"error": "Email parameter is required"}, status=400)
-class UserLogin(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = UserLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.validated_data
-            # You can customize the response as per your requirement
-            return Response({'message': 'Login successful', 'name': user.name}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-class adminLogin(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = adminLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.validated_data
-            # You can customize the response as per your requirement
-            return Response({'message': 'amdmin login successful', 'name': user.name}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        # Retrieve the authenticated user's profile or return 404 if not found
+        profile = get_object_or_404(UserProfile, user=request.user)
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data)
+'''
+# instructor stuff
 class InstructorLogin(APIView):
     permission_classes = [AllowAny]
 
@@ -256,7 +352,7 @@ class InstructorLogin(APIView):
             # You can customize the response as per your requirement
             return Response({'message': 'Instructor login successful', 'name': user.name}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+'''
 class UserRegistration(APIView):
     permission_classes = [AllowAny]
 
@@ -278,4 +374,90 @@ class UserRegistration(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"detail": "Method not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+'''
+# Admin stuff
+class StatisticsView(APIView):
+    permission_classes = [AllowAny]
 
+    def get(self, request):
+        if request.method == 'GET':
+           stats = {
+            'app_user_count': AppUser.objects.count(),
+            'domain_count': Domain.objects.count(),
+            'instructor_count': Instructor.objects.count(),
+            'learner_count': Learner.objects.count(),
+            'training_count': Training.objects.count(),
+            'lesson_count': Lesson.objects.count(),
+            'video_count': Video.objects.count(),
+            'quiz_count': Quiz.objects.count(),
+            'question_count': Question.objects.count(),
+            'answer_count': Answer.objects.count(),
+            'is_enrolled_count': IsEnrolled.objects.count(),
+           }
+           return Response(stats)
+class adminLogin(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = adminLoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data
+            # You can customize the response as per your requirement
+            return Response({'message': 'amdmin login successful', 'name': user.name}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AppUserListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if request.method == 'GET':
+            app_users = AppUser.objects.filter(is_superuser=False, is_staff=False)
+            serializer = AppUserSerializer(app_users, many=True)
+
+            # Append image URLs to each user
+            for user_data in serializer.data:
+                user_data['photo_url'] = request.build_absolute_uri(user_data['photo'])
+
+            return Response(serializer.data)
+
+    def put(self, request, pk):
+        if request.method == 'PUT':
+            app_user = AppUser.objects.get(pk=pk)
+            serializer = AppUserSerializer(app_user, data=request.data, partial=True)  # Specify partial=True
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        if request.method == 'DELETE':
+            try:
+                app_user = AppUser.objects.get(pk=pk)
+                app_user.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except AppUser.DoesNotExist:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class InstructorRegistration(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if request.method == 'POST':
+            data = request.data
+            serializer = InstructorRegistrationSerializer(data=data)
+            if serializer.is_valid():
+                user = serializer.save()  # Save the user instance with is_superuser=True
+                # Create a Learner instance associated with the user
+                learner_data = {'user': user.id, 'total_XP': 0}  # Assuming total_XP starts from 0
+                learner_serializer = LearnerSerializer(data=learner_data)
+                if learner_serializer.is_valid():
+                    learner_serializer.save()
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                else:
+                    user.delete()  # Rollback user creation if learner creation fails
+                    return Response(learner_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"detail": "Method not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
