@@ -2,7 +2,8 @@ from django.urls import path
 from .views import AppUserCreateAPIView, DomainListView, LessonListView, TrainingListView, VideoCreateAPIView, \
     VideoView, LessonDetailView, ChatBotView, ListQuiz, RetriveUpdateDestroyQuiz, QuizQuestion, QuizQuestionDetail, \
     CreateQuiz, TopUsersView, AppUserListView, StatisticsView, InstructorRegistration, UserRegistrationAPIView, \
-    UserLoginAPIView, UserViewAPI, UserLogoutViewAPI, AppUserView, DomainDetailView
+    UserLoginAPIView, UserViewAPI, UserLogoutViewAPI, AppUserView, DomainDetailView, TrainingDetailView, \
+    InstructorListView
 from . import views
 
 urlpatterns = [
@@ -31,9 +32,13 @@ urlpatterns = [
     path('domain/', DomainListView.as_view(), name='domain-list'),
     path('domain/<int:pk>/', DomainDetailView.as_view(), name='domain-detail'),
     path('training/', TrainingListView.as_view(), name='training-list'),
+    path('training/<int:pk>/', TrainingDetailView.as_view(), name='training-detail'),
     path('lesson/', LessonListView.as_view(), name='lesson-list'),
     path('lessons/<int:lesson_id>/', LessonDetailView.as_view(), name='lesson-detail'),
     # admin stuff
+    path('admin/instructorList/', InstructorListView.as_view(), name='ins-list'),
+    path('admin/instructorList/1/<int:pk>/', InstructorListView.as_view(), name='ins_one'),
+    path('admin/instructorList/1/<int:pk>/', InstructorListView.as_view(), name='ins_one'),
     path('admin/learner/', AppUserListView.as_view(), name='learner-list'),
     path('admin/learner/<int:pk>/', AppUserListView.as_view(), name='app_user_detail'),
     path('admin/learner/1/<int:pk>/', AppUserView.as_view(), name='app_user_one'),

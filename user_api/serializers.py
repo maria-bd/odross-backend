@@ -116,6 +116,7 @@ class adminLoginSerializer(serializers.Serializer):
                 raise ValidationError('User not found')
         else:
             raise ValidationError("Must include 'email' and 'password'.")
+'''
 class InstructorLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
