@@ -1,5 +1,6 @@
 from .models import AppUser, Domain, Lesson, Training, Video, Instructor, Learner, IsEnrolled
-# from .serializers import UserRegistrationSerializer, ProfileSerializer, UserLoginSerializer, InstructorLoginSerializer
+from .serializers import ProfileSerializer
+# InstructorLoginSerializer
 from .serializers import VideoSerializer, AppUserSerializer, LearnerSerializer, EditProfileSerializer,\
     DomainSerializer, LessonSerializer, TrainingSerializer
 from .chatbot import ChatBot
@@ -79,7 +80,7 @@ class UserLoginAPIView(APIView):
 
         return Response({'message': 'Something went wrong.'})
 
-class UserViewAPI(APIView):
+'''class UserViewAPI(APIView):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (AllowAny,)
 
@@ -94,7 +95,27 @@ class UserViewAPI(APIView):
         user_model = get_user_model()
         user = user_model.objects.filter(id=payload['id']).first()
         user_serializer = UserRegistrationSerializer(user)
-        return Response(user_serializer.data)
+        return Response(user_serializer.data)'''
+class UserViewAPI(APIView):
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        user_token = request.COOKIES.get('access_token')
+
+        if not user_token:
+            raise AuthenticationFailed('Unauthenticated user.')
+
+        payload = jwt.decode(user_token, settings.SECRET_KEY, algorithms=['HS256'])
+
+        user_model = get_user_model()
+        user = user_model.objects.filter(id=payload['id']).first()
+
+        if not user:
+            raise AuthenticationFailed('User not found.')
+
+        profile_serializer = ProfileSerializer(user)
+        return Response(profile_serializer.data)
 
 class UserLogoutViewAPI(APIView):
     authentication_classes = (TokenAuthentication,)
@@ -232,18 +253,48 @@ class VideoView(APIView):
                 return Response({"error": "Videos not found for this lesson"}, status=404)
         else:
             return Response({"error": "lesson_id parameter is required"}, status=400)
+
+
 class DomainListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        # Check if the HTTP method is GET
-        if request.method == 'GET':
-            # Retrieve all domain objects
-            domains = Domain.objects.all()
-            # Serialize the data
-            serializer = DomainSerializer(domains, many=True)
-            # Return the serialized data
-            return Response(serializer.data)
+        domains = Domain.objects.all()
+        serializer = DomainSerializer(domains, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = DomainSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DomainDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get_object(self, pk):
+        try:
+            return Domain.objects.get(pk=pk)
+        except Domain.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk):
+        domain = self.get_object(pk)
+        serializer = DomainSerializer(domain)
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        if request.method == 'DELETE':
+            try:
+                domain = Domain.objects.get(pk=pk)
+                domain.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except Domain.DoesNotExist:
+                return Response({"error": "Domain not found"}, status=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class TrainingListView(APIView):
         permission_classes = [AllowAny]
@@ -405,6 +456,21 @@ class adminLogin(APIView):
             # You can customize the response as per your requirement
             return Response({'message': 'amdmin login successful', 'name': user.name}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AppUserView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        if request.method == 'GET':
+            app_user = AppUser.objects.get(pk=pk)
+            app_users = AppUser.objects.filter(is_superuser=False, is_staff=False)
+            serializer = AppUserSerializer(app_users, many=True)
+
+            # Append image URLs to each user
+            for user_data in serializer.data:
+                user_data['photo_url'] = request.build_absolute_uri(user_data['photo'])
+
+            return Response(serializer.data)
 
 class AppUserListView(APIView):
     permission_classes = [AllowAny]

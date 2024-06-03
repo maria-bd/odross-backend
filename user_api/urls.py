@@ -2,7 +2,7 @@ from django.urls import path
 from .views import AppUserCreateAPIView, DomainListView, LessonListView, TrainingListView, VideoCreateAPIView, \
     VideoView, LessonDetailView, ChatBotView, ListQuiz, RetriveUpdateDestroyQuiz, QuizQuestion, QuizQuestionDetail, \
     CreateQuiz, TopUsersView, AppUserListView, StatisticsView, InstructorRegistration, UserRegistrationAPIView, \
-    UserLoginAPIView, UserViewAPI, UserLogoutViewAPI
+    UserLoginAPIView, UserViewAPI, UserLogoutViewAPI, AppUserView, DomainDetailView
 from . import views
 
 urlpatterns = [
@@ -29,12 +29,14 @@ urlpatterns = [
     path('video/', VideoView.as_view(), name='video_api'),
     path('photo/', AppUserCreateAPIView.as_view(), name='upload_photo_api'),
     path('domain/', DomainListView.as_view(), name='domain-list'),
+    path('domain/<int:pk>/', DomainDetailView.as_view(), name='domain-detail'),
     path('training/', TrainingListView.as_view(), name='training-list'),
     path('lesson/', LessonListView.as_view(), name='lesson-list'),
     path('lessons/<int:lesson_id>/', LessonDetailView.as_view(), name='lesson-detail'),
     # admin stuff
     path('admin/learner/', AppUserListView.as_view(), name='learner-list'),
     path('admin/learner/<int:pk>/', AppUserListView.as_view(), name='app_user_detail'),
+    path('admin/learner/1/<int:pk>/', AppUserView.as_view(), name='app_user_one'),
     path('admin/instructor/', InstructorRegistration.as_view(), name='instructor-register'),
     # path('login3/', adminLogin.as_view(), name='admin-login'),
 ]
