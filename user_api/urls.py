@@ -3,7 +3,7 @@ from .views import AppUserCreateAPIView, DomainListView, LessonListView, Trainin
     VideoView, LessonDetailView, ChatBotView, ListQuiz, RetriveUpdateDestroyQuiz, QuizQuestion, QuizQuestionDetail, \
     CreateQuiz, TopUsersView, AppUserListView, StatisticsView, InstructorRegistration, UserRegistrationAPIView, \
     UserLoginAPIView, UserViewAPI, UserLogoutViewAPI, AppUserView, DomainDetailView, TrainingDetailView, \
-    InstructorListView
+    InstructorListView, InstructorLogin, adminLogin
 from . import views
 
 urlpatterns = [
@@ -23,7 +23,7 @@ urlpatterns = [
     path('generate/', ChatBotView.as_view(), name='generate_chatbot_response'),
     # path('1register/', UserRegistration.as_view(), name='user-registration'),
     # path('1login/', UserLogin.as_view(), name='user_login'),
-    # path('login2/', InstructorLogin.as_view(), name='instructor-login'),
+    path('login2/', InstructorLogin.as_view(), name='instructor-login'),
     # path('profile/', ProfileView.as_view(), name='profile'),
     # path('profileUpdate/', EditProfileView.as_view(), name='profile-update'),
     path('videoPost/', VideoCreateAPIView.as_view(), name='upload_video_api'),
@@ -37,11 +37,11 @@ urlpatterns = [
     path('lessons/<int:lesson_id>/', LessonDetailView.as_view(), name='lesson-detail'),
     # admin stuff
     path('admin/instructorList/', InstructorListView.as_view(), name='ins-list'),
-    path('admin/instructorList/1/<int:pk>/', InstructorListView.as_view(), name='ins_one'),
+    path('admin/instructorList/<int:pk>/', InstructorListView.as_view(), name='ins_edit_delete'),
     path('admin/instructorList/1/<int:pk>/', InstructorListView.as_view(), name='ins_one'),
     path('admin/learner/', AppUserListView.as_view(), name='learner-list'),
     path('admin/learner/<int:pk>/', AppUserListView.as_view(), name='app_user_detail'),
     path('admin/learner/1/<int:pk>/', AppUserView.as_view(), name='app_user_one'),
     path('admin/instructor/', InstructorRegistration.as_view(), name='instructor-register'),
-    # path('login3/', adminLogin.as_view(), name='admin-login'),
+    path('login3/', adminLogin.as_view(), name='admin-login'),
 ]

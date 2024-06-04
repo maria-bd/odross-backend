@@ -98,7 +98,7 @@ class EditProfileSerializer(serializers.ModelSerializer):
         instance.bio = validated_data.get('bio', instance.bio)
         instance.save()
         return instance
-'''
+
 class adminLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
@@ -113,10 +113,10 @@ class adminLoginSerializer(serializers.Serializer):
                 user = AppUser.objects.get(email=email, password=password, is_staff=True)
                 return user
             except AppUser.DoesNotExist:
-                raise ValidationError('User not found')
+                raise ValidationError('User not found or not an admin')
         else:
             raise ValidationError("Must include 'email' and 'password'.")
-'''
+
 class InstructorLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
@@ -134,20 +134,38 @@ class InstructorLoginSerializer(serializers.Serializer):
                 raise ValidationError('User not found or not an instructor')
         else:
             raise ValidationError("Must include 'email' and 'password'.")
+
 class InstructorRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(max_length=100, min_length=8, style={'input_type': 'password'})
+    grade = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    token = serializers.CharField(read_only=True)  # Add token field
+
     class Meta:
         model = AppUser
-        fields = ['name', 'email', 'password']
+        fields = ['name', 'email', 'password', 'grade', 'token']
 
     def create(self, validated_data):
+        # Extract and handle grade, defaulting to an empty string if not provided
+        grade = validated_data.pop('grade', "")
+
+        # Extract password
+        user_password = validated_data.pop('password')
+
+        # Create the AppUser instance with is_superuser set to True
         user = AppUser.objects.create(
             email=validated_data['email'],
             name=validated_data['name'],
-            password=validated_data['password'],
             is_superuser=True
         )
+        user.set_password(user_password)
+        user.save()
+
+        # Create the Instructor instance with the created user and grade
+        Instructor.objects.create(user=user, grade=grade)
+
         return user
-'''''
+
+
 class AppUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppUser

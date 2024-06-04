@@ -1,7 +1,7 @@
 from .models import AppUser, Domain, Lesson, Training, Video, Instructor, Learner, IsEnrolled
-from .serializers import ProfileSerializer, InstructorLoginSerializer
+from .serializers import ProfileSerializer, InstructorRegistrationSerializer
 from .serializers import VideoSerializer, AppUserSerializer, LearnerSerializer, EditProfileSerializer,\
-    DomainSerializer, LessonSerializer, TrainingSerializer
+    DomainSerializer, LessonSerializer, TrainingSerializer, adminLoginSerializer, InstructorLoginSerializer
 from .chatbot import ChatBot
 from configparser import ConfigParser
 from rest_framework import generics, status
@@ -79,22 +79,7 @@ class UserLoginAPIView(APIView):
 
         return Response({'message': 'Something went wrong.'})
 
-'''class UserViewAPI(APIView):
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (AllowAny,)
 
-    def get(self, request):
-        user_token = request.COOKIES.get('access_token')
-
-        if not user_token:
-            raise AuthenticationFailed('Unauthenticated user.')
-
-        payload = jwt.decode(user_token, settings.SECRET_KEY, algorithms=['HS256'])
-
-        user_model = get_user_model()
-        user = user_model.objects.filter(id=payload['id']).first()
-        user_serializer = UserRegistrationSerializer(user)
-        return Response(user_serializer.data)'''
 class UserViewAPI(APIView):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (AllowAny,)
@@ -487,7 +472,7 @@ class adminLogin(APIView):
         if serializer.is_valid():
             user = serializer.validated_data
             # You can customize the response as per your requirement
-            return Response({'message': 'amdmin login successful', 'name': user.name}, status=status.HTTP_200_OK)
+            return Response({'message': 'admin login successful', 'name': user.name}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AppUserView(APIView):
@@ -574,23 +559,18 @@ class InstructorListView(APIView):
                 return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class InstructorRegistration(APIView):
-    permission_classes = [AllowAny]
+    serializer_class = InstructorRegistrationSerializer
+    permission_classes = (AllowAny,)
 
     def post(self, request):
-        if request.method == 'POST':
-            data = request.data
-            serializer = InstructorRegistrationSerializer(data=data)
-            if serializer.is_valid():
-                user = serializer.save()  # Save the user instance with is_superuser=True
-                # Create a Learner instance associated with the user
-                learner_data = {'user': user.id, 'total_XP': 0}  # Assuming total_XP starts from 0
-                learner_serializer = LearnerSerializer(data=learner_data)
-                if learner_serializer.is_valid():
-                    learner_serializer.save()
-                    return Response(serializer.data, status=status.HTTP_201_CREATED)
-                else:
-                    user.delete()  # Rollback user creation if learner creation fails
-                    return Response(learner_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"detail": "Method not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            new_user = serializer.save()
+            if new_user:
+                access_token = generate_access_token(new_user)
+                data = {'access_token': access_token}
+                response = Response(data, status=status.HTTP_201_CREATED)
+                response.set_cookie(key='access_token', value=access_token, httponly=True)
+
+                return response
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
