@@ -3,7 +3,7 @@ from .views import AppUserCreateAPIView, DomainListView, LessonListView, Trainin
     VideoView, LessonDetailView, ChatBotView, ListQuiz, RetriveUpdateDestroyQuiz, QuizQuestion, QuizQuestionDetail, \
     CreateQuiz, TopUsersView, AppUserListView, StatisticsView, InstructorRegistration, UserRegistrationAPIView, \
     UserLoginAPIView, UserViewAPI, UserLogoutViewAPI, AppUserView, DomainDetailView, TrainingDetailView, \
-    InstructorListView, InstructorLogin, adminLogin
+    InstructorListView, InstructorLogin, adminLogin, LessonDelete, VideoDelete, VideosView, VideoCreate
 from . import views
 
 urlpatterns = [
@@ -26,8 +26,11 @@ urlpatterns = [
     path('login2/', InstructorLogin.as_view(), name='instructor-login'),
     # path('profile/', ProfileView.as_view(), name='profile'),
     # path('profileUpdate/', EditProfileView.as_view(), name='profile-update'),
-    path('videoPost/', VideoCreateAPIView.as_view(), name='upload_video_api'),
+    path('videoUpload/', VideoCreate.as_view(), name='upload_video_api'),
+    # path('videoPost/', VideoCreateAPIView.as_view(), name='upload_video_api'),
+    path('videoDelete/<int:pk>/', VideoDelete.as_view(), name='video-del'),
     path('video/', VideoView.as_view(), name='video_api'),
+    path('videos/', VideosView.as_view(), name='video_api'),
     path('photo/', AppUserCreateAPIView.as_view(), name='upload_photo_api'),
     path('domain/', DomainListView.as_view(), name='domain-list'),
     path('domain/<int:pk>/', DomainDetailView.as_view(), name='domain-detail'),
@@ -35,6 +38,7 @@ urlpatterns = [
     path('training/<int:pk>/', TrainingDetailView.as_view(), name='training-detail'),
     path('lesson/', LessonListView.as_view(), name='lesson-list'),
     path('lessons/<int:lesson_id>/', LessonDetailView.as_view(), name='lesson-detail'),
+    path('lessons/delete/<int:lesson_id>/', LessonDelete.as_view(), name='lesson-delete'),
     # admin stuff
     path('admin/instructorList/', InstructorListView.as_view(), name='ins-list'),
     path('admin/instructorList/<int:pk>/', InstructorListView.as_view(), name='ins_edit_delete'),
